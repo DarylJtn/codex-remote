@@ -95,10 +95,22 @@ docker exec "$TEST_CONTAINER" sh -c '
   kill -0 "$daemon_pid"
 '
 
+set +e
 pair_output="$(docker exec "$TEST_CONTAINER" \
-  codex remote-control pair --json 2>/dev/null)"
-jq -e '.environmentId and .manualPairingCode and .expiresAt' \
-  <<<"$pair_output" >/dev/null
+  codex remote-control pair --json 2>&1)"
+pair_status=$?
+set -e
+
+if [[ "$pair_status" -eq 0 ]]; then
+  jq -e '.environmentId and .manualPairingCode and .expiresAt' \
+    <<<"$pair_output" >/dev/null
+elif ! grep -Fq \
+  'remote control pairing is unavailable until enrollment completes' \
+  <<<"$pair_output"; then
+  printf '%s\n' "$pair_output" >&2
+  echo "Remote Control pairing endpoint failed unexpectedly" >&2
+  exit 1
+fi
 
 echo "Managed app-server, control socket, and pairing endpoint passed"
 
