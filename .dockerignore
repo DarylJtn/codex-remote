@@ -1,0 +1,8 @@
+.git
+.github
+.env
+workspace
+data
+*.log
+README.md
+

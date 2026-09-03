@@ -1,0 +1,32 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "baseBranches": ["master"],
+  "dependencyDashboard": true,
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/(^|/)Dockerfile$/",
+        "/(^|/)compose\\.yaml$/",
+        "/(^|/)\\.env\\.example$/",
+        "/(^|/)scripts/smoke-test\\.sh$/",
+        "/(^|/)\\.github/workflows/ci\\.yaml$/"
+      ],
+      "matchStrings": [
+        "CODEX_RELEASE(?:=|: |:-)(?<currentValue>\\d+\\.\\d+\\.\\d+)"
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "openai/codex",
+      "extractVersionTemplate": "^rust-v(?<version>.*)$"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Keep Codex updates reviewable until authenticated Remote tests exist",
+      "matchPackageNames": ["openai/codex"],
+      "automerge": false
+    }
+  ]
+}
+

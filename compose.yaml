@@ -1,0 +1,71 @@
+name: codex-remote
+
+x-codex-common: &codex-common
+  image: ${CODEX_IMAGE:-codex-remote:local}
+  build:
+    context: .
+    args:
+      CODEX_RELEASE: ${CODEX_RELEASE:-0.153.0}
+      USER_UID: ${PUID:-1000}
+      USER_GID: ${PGID:-1000}
+  hostname: ${CODEX_HOSTNAME:-codex-remote}
+  working_dir: /workspace
+  environment:
+    HOME: /home/codex
+    CODEX_HOME: /home/codex/.codex
+    TERM: xterm-256color
+  volumes:
+    - codex_home:/home/codex/.codex
+    - type: bind
+      source: ${WORKSPACE_PATH:-./workspace}
+      target: /workspace
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+
+services:
+  codex-remote:
+    <<: *codex-common
+    command:
+      - remote-control
+      - --json
+    restart: unless-stopped
+    stop_grace_period: 30s
+
+  login:
+    <<: *codex-common
+    profiles:
+      - tools
+    command:
+      - login
+      - --device-auth
+    stdin_open: true
+    tty: true
+    restart: "no"
+
+  status:
+    <<: *codex-common
+    profiles:
+      - tools
+    command:
+      - login
+      - status
+    restart: "no"
+
+  shell:
+    <<: *codex-common
+    profiles:
+      - tools
+    entrypoint:
+      - /usr/bin/tini
+      - --
+      - /bin/bash
+    command: []
+    stdin_open: true
+    tty: true
+    restart: "no"
+
+volumes:
+  codex_home:
+    name: ${CODEX_VOLUME:-codex-remote-home}

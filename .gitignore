@@ -1,0 +1,8 @@
+.env
+data/
+*.log
+
+workspace/*
+!workspace/.gitkeep
+!workspace/README.md
+
