@@ -84,4 +84,4 @@ USER codex
 WORKDIR /workspace
 
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/codex-entrypoint"]
-CMD ["remote-control", "--json"]
+CMD ["remote-control-daemon"]

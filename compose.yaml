@@ -28,8 +28,7 @@ services:
   codex-remote:
     <<: *codex-common
     command:
-      - remote-control
-      - --json
+      - remote-control-daemon
     restart: unless-stopped
     stop_grace_period: 30s
 

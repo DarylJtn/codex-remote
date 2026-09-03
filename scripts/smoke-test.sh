@@ -57,10 +57,18 @@ docker create \
   --name "$TEST_CONTAINER" \
   --hostname codex-remote-smoke \
   --volume "$TEST_VOLUME:/home/codex/.codex" \
-  "$IMAGE" remote-control --json >/dev/null
+  "$IMAGE" >/dev/null
 docker start "$TEST_CONTAINER" >/dev/null
 
-sleep 5
+for _ in {1..15}; do
+  if docker exec "$TEST_CONTAINER" \
+    test -S /home/codex/.codex/app-server-control/app-server-control.sock \
+    2>/dev/null; then
+    break
+  fi
+  sleep 1
+done
+
 remote_state="$(docker inspect --format '{{.State.Status}}' "$TEST_CONTAINER")"
 remote_output="$(docker logs "$TEST_CONTAINER" 2>&1 || true)"
 printf '%s\n' "$remote_output"
@@ -73,14 +81,25 @@ if grep -Eqi \
 fi
 
 if [[ "$remote_state" != running ]]; then
-  if grep -Eqi \
-    'auth|login|sign in|credential|connection is errored' \
-    <<<"$remote_output"; then
-    echo "Remote Control reached the relay path; an unauthenticated smoke volume cannot validate connectivity"
-  else
-    echo "Remote Control exited for an unexpected reason" >&2
-    exit 1
-  fi
+  echo "Remote Control supervisor exited unexpectedly" >&2
+  exit 1
 fi
+
+docker exec "$TEST_CONTAINER" \
+  test -S /home/codex/.codex/app-server-control/app-server-control.sock
+
+docker exec "$TEST_CONTAINER" sh -c '
+  pid_file="$CODEX_HOME/app-server-daemon/app-server.pid"
+  daemon_pid="$(jq -r ".pid // empty" "$pid_file")"
+  test -n "$daemon_pid"
+  kill -0 "$daemon_pid"
+'
+
+pair_output="$(docker exec "$TEST_CONTAINER" \
+  codex remote-control pair --json 2>/dev/null)"
+jq -e '.environmentId and .manualPairingCode and .expiresAt' \
+  <<<"$pair_output" >/dev/null
+
+echo "Managed app-server, control socket, and pairing endpoint passed"
 
 echo "Smoke tests passed"

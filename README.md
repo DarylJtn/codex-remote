@@ -3,16 +3,18 @@
 A small, persistent Docker host for running Codex Remote Control on an
 always-on Linux server.
 
-The image deliberately targets one lifecycle: it starts Codex Remote Control
-in the foreground and lets Docker supervise it. It does not expose an inbound
-port and does not attempt to run the ChatGPT Linux desktop GUI.
+The image deliberately targets one lifecycle: it starts the managed Codex
+app-server with Remote Control enabled and supervises that daemon as one Docker
+service. It does not expose an inbound port and does not attempt to run the
+ChatGPT Linux desktop GUI.
 
 ## Design
 
 - Ubuntu 24.04 LTS runtime for broad Linux compatibility.
 - Official standalone Codex installer with an exact release version.
 - Distribution-provided `bubblewrap` for the supported Linux sandbox path.
-- `codex remote-control --json` as the long-running foreground process.
+- `codex remote-control start --json` to launch the managed app-server required
+  by Remote clients, wrapped by a small PID/socket supervisor.
 - Non-root runtime user.
 - Persistent `CODEX_HOME` volume for auth, enrollment, configuration, sessions,
   skills, plugins, logs, and local MCP state.
@@ -22,10 +24,9 @@ port and does not attempt to run the ChatGPT Linux desktop GUI.
 
 ## Important status
 
-The Codex CLI contains a Linux foreground Remote Control path, but OpenAI's
-public Remote documentation may lag the shipped CLI and still describe Mac and
-Windows desktop hosts. Treat phone connectivity as an acceptance test for your
-account before automating deployment.
+Remote Control and the app-server commands are still marked experimental by the
+CLI. Treat phone connectivity as an acceptance test for your account before
+automating deployment.
 
 ## Prerequisites
 
@@ -65,8 +66,9 @@ docker compose up -d codex-remote
 docker compose logs --follow codex-remote
 ```
 
-The log should report a foreground Remote status without a managed-install or
-PID-tracking error. Open Remote in the ChatGPT mobile app and confirm that
+The log should report daemon mode with `status` set to `connected`. A transient
+connection error can appear while an old session expires; the daemon keeps
+running and reconnects. Open Remote in the ChatGPT mobile app and confirm that
 `codex-remote` appears.
 
 ## Acceptance test
@@ -123,10 +125,10 @@ docker compose build
 IMAGE=codex-remote:local bash scripts/smoke-test.sh
 ```
 
-The unauthenticated CI test cannot prove that the ChatGPT relay accepts a
-specific account. A generic `connection is errored` result is expected from the
-fresh smoke-test volume when no credentials are present. The phone acceptance
-test remains required after significant Remote Control changes.
+The smoke test verifies the managed app-server process, its control socket, and
+the pairing endpoint. It cannot prove that the ChatGPT relay accepts a specific
+account, so the phone acceptance test remains required after significant Remote
+Control changes.
 
 ## Security
 

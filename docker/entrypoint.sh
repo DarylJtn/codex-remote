@@ -38,11 +38,57 @@ if [ ! -x /usr/local/bin/codex ] || [ ! -x "${state_current}/codex" ]; then
   exit 1
 fi
 
+run_remote_control_daemon() {
+  daemon_dir="${CODEX_HOME}/app-server-daemon"
+  daemon_pid_file="${daemon_dir}/app-server.pid"
+  control_socket="${CODEX_HOME}/app-server-control/app-server-control.sock"
+
+  stop_daemon() {
+    trap - HUP INT TERM
+    /usr/local/bin/codex remote-control stop --json || true
+    exit 0
+  }
+
+  trap stop_daemon HUP INT TERM
+
+  # Recover from an unclean container stop without deleting auth or project state.
+  /usr/local/bin/codex remote-control stop --json >/dev/null 2>&1 || true
+
+  # A relay error can be transient while a previous connection expires. The
+  # daemon is healthy if it has created both its PID record and control socket.
+  if ! /usr/local/bin/codex remote-control start --json; then
+    if [ ! -S "${control_socket}" ] || [ ! -s "${daemon_pid_file}" ]; then
+      echo "Codex app-server daemon failed to start" >&2
+      exit 1
+    fi
+  fi
+
+  while :; do
+    daemon_pid="$(jq -r '.pid // empty' "${daemon_pid_file}" 2>/dev/null || true)"
+
+    if [ -z "${daemon_pid}" ] || ! kill -0 "${daemon_pid}" 2>/dev/null; then
+      echo "Codex app-server daemon exited unexpectedly" >&2
+      exit 1
+    fi
+
+    if [ ! -S "${control_socket}" ]; then
+      echo "Codex app-server control socket disappeared" >&2
+      exit 1
+    fi
+
+    sleep 5 &
+    wait "$!"
+  done
+}
+
 if [ "$#" -eq 0 ]; then
-  set -- remote-control --json
+  set -- remote-control-daemon
 fi
 
 case "$1" in
+  remote-control-daemon)
+    run_remote_control_daemon
+    ;;
   codex)
     shift
     exec /usr/local/bin/codex "$@"
