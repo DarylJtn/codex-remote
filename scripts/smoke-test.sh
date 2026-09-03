@@ -34,7 +34,7 @@ docker run --rm --entrypoint /bin/sh "$IMAGE" -c '
   test -x /usr/local/bin/codex
   test -x /opt/codex-home/packages/standalone/current/codex
   test -x /opt/codex-home/packages/standalone/current/bin/codex
-  for command_name in bash git jq rg ssh tini; do
+  for command_name in bash bwrap git jq rg ssh tini; do
     command -v "$command_name" >/dev/null
   done
 '
@@ -72,10 +72,15 @@ if grep -Eqi \
   exit 1
 fi
 
-if [[ "$remote_state" != running ]] && \
-   ! grep -Eqi 'auth|login|sign in|credential' <<<"$remote_output"; then
-  echo "Remote Control exited for an unexpected reason" >&2
-  exit 1
+if [[ "$remote_state" != running ]]; then
+  if grep -Eqi \
+    'auth|login|sign in|credential|connection is errored' \
+    <<<"$remote_output"; then
+    echo "Remote Control reached the relay path; an unauthenticated smoke volume cannot validate connectivity"
+  else
+    echo "Remote Control exited for an unexpected reason" >&2
+    exit 1
+  fi
 fi
 
 echo "Smoke tests passed"

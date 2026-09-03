@@ -33,6 +33,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends \
         bash \
+        bubblewrap \
         ca-certificates \
         curl \
         git \

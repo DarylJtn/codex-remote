@@ -11,6 +11,7 @@ port and does not attempt to run the ChatGPT Linux desktop GUI.
 
 - Ubuntu 24.04 LTS runtime for broad Linux compatibility.
 - Official standalone Codex installer with an exact release version.
+- Distribution-provided `bubblewrap` for the supported Linux sandbox path.
 - `codex remote-control --json` as the long-running foreground process.
 - Non-root runtime user.
 - Persistent `CODEX_HOME` volume for auth, enrollment, configuration, sessions,
@@ -123,8 +124,9 @@ IMAGE=codex-remote:local bash scripts/smoke-test.sh
 ```
 
 The unauthenticated CI test cannot prove that the ChatGPT relay accepts a
-specific account. The phone acceptance test remains required after significant
-Remote Control changes.
+specific account. A generic `connection is errored` result is expected from the
+fresh smoke-test volume when no credentials are present. The phone acceptance
+test remains required after significant Remote Control changes.
 
 ## Security
 
