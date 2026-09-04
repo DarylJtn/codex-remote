@@ -34,10 +34,6 @@ docker run --rm --entrypoint /bin/sh "$IMAGE" -c '
   test -x /usr/local/bin/codex
   test -x /opt/codex-home/packages/standalone/current/codex
   test -x /opt/codex-home/packages/standalone/current/bin/codex
-  test "$(git -C /home/codex/Documents/Codex branch --show-current)" = master
-  grep -Fqx "[projects.\"/home/codex/Documents/Codex\"]" \
-    "$CODEX_HOME/config.toml"
-  grep -Fqx "[projects.\"/workspace\"]" "$CODEX_HOME/config.toml"
   for command_name in bash bwrap git jq rg ssh tini; do
     command -v "$command_name" >/dev/null
   done
@@ -50,6 +46,10 @@ docker run --rm \
     test -w "$CODEX_HOME"
     test "$(readlink "$CODEX_HOME/packages/standalone/current")" = \
       /opt/codex-home/packages/standalone/current
+    test "$(git -C /home/codex/Documents/Codex branch --show-current)" = master
+    grep -Fqx "[projects.\"/home/codex/Documents/Codex\"]" \
+      "$CODEX_HOME/config.toml"
+    grep -Fqx "[projects.\"/workspace\"]" "$CODEX_HOME/config.toml"
     printf persisted >"$CODEX_HOME/smoke-marker"
   '
 
