@@ -38,6 +38,27 @@ if [ ! -x /usr/local/bin/codex ] || [ ! -x "${state_current}/codex" ]; then
   exit 1
 fi
 
+ensure_trusted_project() {
+  project_path="$1"
+  trust_header="[projects.\"${project_path}\"]"
+  config_file="${CODEX_HOME}/config.toml"
+
+  touch "${config_file}"
+  if ! grep -Fqx "${trust_header}" "${config_file}"; then
+    printf '\n%s\ntrust_level = "trusted"\n' "${trust_header}" >>"${config_file}"
+  fi
+}
+
+scratch_root="${CODEX_SCRATCH_ROOT:-${HOME}/Documents/Codex}"
+mkdir -p "${scratch_root}"
+
+if ! git -C "${scratch_root}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  git -C "${scratch_root}" init --initial-branch=master >/dev/null
+fi
+
+ensure_trusted_project "${scratch_root}"
+ensure_trusted_project /workspace
+
 run_remote_control_daemon() {
   daemon_dir="${CODEX_HOME}/app-server-daemon"
   daemon_pid_file="${daemon_dir}/app-server.pid"

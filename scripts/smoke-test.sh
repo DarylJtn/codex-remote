@@ -34,6 +34,10 @@ docker run --rm --entrypoint /bin/sh "$IMAGE" -c '
   test -x /usr/local/bin/codex
   test -x /opt/codex-home/packages/standalone/current/codex
   test -x /opt/codex-home/packages/standalone/current/bin/codex
+  test "$(git -C /home/codex/Documents/Codex branch --show-current)" = master
+  grep -Fqx "[projects.\"/home/codex/Documents/Codex\"]" \
+    "$CODEX_HOME/config.toml"
+  grep -Fqx "[projects.\"/workspace\"]" "$CODEX_HOME/config.toml"
   for command_name in bash bwrap git jq rg ssh tini; do
     command -v "$command_name" >/dev/null
   done
@@ -93,6 +97,9 @@ docker exec "$TEST_CONTAINER" sh -c '
   daemon_pid="$(jq -r ".pid // empty" "$pid_file")"
   test -n "$daemon_pid"
   kill -0 "$daemon_pid"
+  test "$(git -C /home/codex/Documents/Codex rev-parse --show-toplevel)" = \
+    /home/codex/Documents/Codex
+  test "$(git -C /home/codex/Documents/Codex branch --show-current)" = master
 '
 
 set +e

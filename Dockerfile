@@ -60,7 +60,7 @@ RUN apt-get update \
          useradd --uid "${USER_UID}" --gid "${USER_GID}" \
            --create-home --shell /bin/bash codex; \
        fi \
-    && mkdir -p /home/codex/.codex /workspace \
+    && mkdir -p /home/codex/.codex /home/codex/Documents/Codex /workspace \
     && chown -R "${USER_UID}:${USER_GID}" /home/codex /workspace
 
 COPY --from=codex-installer /opt/codex-home /opt/codex-home

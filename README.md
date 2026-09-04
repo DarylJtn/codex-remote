@@ -18,6 +18,9 @@ ChatGPT Linux desktop GUI.
 - Non-root runtime user.
 - Persistent `CODEX_HOME` volume for auth, enrollment, configuration, sessions,
   skills, plugins, logs, and local MCP state.
+- Persistent scratch volume at `~/Documents/Codex`, initialized as one trusted
+  Git repository on `master`, so every generated **No project** chat inherits a
+  stable trusted root.
 - Stable hostname so container recreation does not change the Remote identity.
 - Separate, disposable services for device login, login status, and a shell.
 - No published ports, privileged mode, host networking, or Docker socket.
@@ -113,7 +116,7 @@ To update manually:
 3. Rebuild and recreate the service.
 
 Persistent user state is separate from the image, so rolling the image back
-does not delete authentication or conversations.
+does not delete authentication, conversations, or projectless scratch files.
 
 ## Verification
 

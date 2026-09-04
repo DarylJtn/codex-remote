@@ -16,6 +16,7 @@ x-codex-common: &codex-common
     TERM: xterm-256color
   volumes:
     - codex_home:/home/codex/.codex
+    - codex_scratch:/home/codex/Documents/Codex
     - type: bind
       source: ${WORKSPACE_PATH:-./workspace}
       target: /workspace
@@ -68,3 +69,5 @@ services:
 volumes:
   codex_home:
     name: ${CODEX_VOLUME:-codex-remote-home}
+  codex_scratch:
+    name: ${CODEX_SCRATCH_VOLUME:-codex-remote-scratch}
