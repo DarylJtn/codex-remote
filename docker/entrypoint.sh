@@ -40,13 +40,19 @@ fi
 
 ensure_trusted_project() {
   project_path="$1"
-  trust_header="[projects.\"${project_path}\"]"
   config_file="${CODEX_HOME}/config.toml"
+  config_lock="${config_file}.lock"
+  quoted_project_path="$(jq -rn --arg path "${project_path}" '$path | @json')"
+  trust_header="[projects.${quoted_project_path}]"
 
-  touch "${config_file}"
-  if ! grep -Fqx "${trust_header}" "${config_file}"; then
-    printf '\n%s\ntrust_level = "trusted"\n' "${trust_header}" >>"${config_file}"
-  fi
+  (
+    flock 9
+    touch "${config_file}"
+    if ! grep -Fqx "${trust_header}" "${config_file}"; then
+      printf '\n%s\ntrust_level = "trusted"\n' \
+        "${trust_header}" >>"${config_file}"
+    fi
+  ) 9>"${config_lock}"
 }
 
 scratch_root="${CODEX_SCRATCH_ROOT:-${HOME}/Documents/Codex}"
@@ -59,6 +65,27 @@ fi
 ensure_trusted_project "${scratch_root}"
 ensure_trusted_project /workspace
 
+watch_scratch_projects() {
+  # Remote creates a fresh dated directory before it starts a projectless chat.
+  # Its trust check uses that exact path rather than the enclosing Git root, so
+  # register existing and newly created children as individual trusted projects.
+  for project_path in "${scratch_root}"/*; do
+    if [ -d "${project_path}" ]; then
+      ensure_trusted_project "${project_path}"
+    fi
+  done
+
+  inotifywait --monitor --quiet \
+    --event create --event moved_to \
+    --format '%f' "${scratch_root}" |
+    while IFS= read -r project_name; do
+      project_path="${scratch_root}/${project_name}"
+      if [ -d "${project_path}" ]; then
+        ensure_trusted_project "${project_path}"
+      fi
+    done
+}
+
 run_remote_control_daemon() {
   daemon_dir="${CODEX_HOME}/app-server-daemon"
   daemon_pid_file="${daemon_dir}/app-server.pid"
@@ -66,6 +93,9 @@ run_remote_control_daemon() {
 
   stop_daemon() {
     trap - HUP INT TERM
+    if [ -n "${scratch_watcher_pid:-}" ]; then
+      kill "${scratch_watcher_pid}" 2>/dev/null || true
+    fi
     /usr/local/bin/codex remote-control stop --json || true
     exit 0
   }
@@ -78,6 +108,9 @@ run_remote_control_daemon() {
     "${daemon_dir}/app-server.pid" \
     "${daemon_dir}/app-server-updater.pid" \
     "${control_socket}"
+
+  watch_scratch_projects &
+  scratch_watcher_pid=$!
 
   # A relay error can be transient while a previous connection expires. The
   # daemon is healthy if it has created both its PID record and control socket.
@@ -98,6 +131,11 @@ run_remote_control_daemon() {
 
     if [ ! -S "${control_socket}" ]; then
       echo "Codex app-server control socket disappeared" >&2
+      exit 1
+    fi
+
+    if ! kill -0 "${scratch_watcher_pid}" 2>/dev/null; then
+      echo "Scratch project trust watcher exited unexpectedly" >&2
       exit 1
     fi
 

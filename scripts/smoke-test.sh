@@ -34,7 +34,7 @@ docker run --rm --entrypoint /bin/sh "$IMAGE" -c '
   test -x /usr/local/bin/codex
   test -x /opt/codex-home/packages/standalone/current/codex
   test -x /opt/codex-home/packages/standalone/current/bin/codex
-  for command_name in bash bwrap git jq rg ssh tini; do
+  for command_name in bash bwrap flock git inotifywait jq rg ssh tini; do
     command -v "$command_name" >/dev/null
   done
 '
@@ -110,6 +110,22 @@ docker exec "$TEST_CONTAINER" sh -c '
     /home/codex/Documents/Codex
   test "$(git -C /home/codex/Documents/Codex branch --show-current)" = master
 '
+
+scratch_project="/home/codex/Documents/Codex/smoke-project-$RANDOM-$$"
+docker exec "$TEST_CONTAINER" mkdir "$scratch_project"
+
+for _ in {1..20}; do
+  if docker exec "$TEST_CONTAINER" grep -Fqx \
+    "[projects.\"$scratch_project\"]" \
+    /home/codex/.codex/config.toml 2>/dev/null; then
+    break
+  fi
+  sleep 0.1
+done
+
+docker exec "$TEST_CONTAINER" grep -Fqx \
+  "[projects.\"$scratch_project\"]" \
+  /home/codex/.codex/config.toml
 
 set +e
 pair_output="$(docker exec "$TEST_CONTAINER" \

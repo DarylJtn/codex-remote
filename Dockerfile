@@ -37,6 +37,7 @@ RUN apt-get update \
         ca-certificates \
         curl \
         git \
+        inotify-tools \
         jq \
         less \
         openssh-client \
