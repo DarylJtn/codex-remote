@@ -57,6 +57,15 @@ docker run --rm \
   --volume "$TEST_VOLUME:/home/codex/.codex" \
   "$IMAGE" sh -c 'test "$(cat "$CODEX_HOME/smoke-marker")" = persisted'
 
+docker run --rm \
+  --volume "$TEST_VOLUME:/home/codex/.codex" \
+  "$IMAGE" sh -c '
+    mkdir -p "$CODEX_HOME/app-server-daemon"
+    printf "%s\n" \
+      "{\"pid\":999999,\"processStartTime\":\"stale\"}" \
+      >"$CODEX_HOME/app-server-daemon/app-server.pid"
+  '
+
 docker create \
   --name "$TEST_CONTAINER" \
   --hostname codex-remote-smoke \

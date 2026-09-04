@@ -74,6 +74,10 @@ run_remote_control_daemon() {
 
   # Recover from an unclean container stop without deleting auth or project state.
   /usr/local/bin/codex remote-control stop --json >/dev/null 2>&1 || true
+  rm -f \
+    "${daemon_dir}/app-server.pid" \
+    "${daemon_dir}/app-server-updater.pid" \
+    "${control_socket}"
 
   # A relay error can be transient while a previous connection expires. The
   # daemon is healthy if it has created both its PID record and control socket.
